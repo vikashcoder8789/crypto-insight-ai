@@ -7,7 +7,7 @@
 # Libraries Used: pdfplumber, nltk, string, spacy, numpy, sklearn, textblob, rank_bm25
 # Input: PDF files containing text
 # Output: Extracted text, cleaned text, sentiment analysis, named entities, and answers to user queries
-# Usage: Run the script and enter queries about cryptocurrencies to get relevant answers from the extracted text.
+# Usage: Run the script and provide user queries about crypto. The script will extract text from the specified PDF files, preprocess the text, and perform sentiment analysis and named entity recognition. It will also retrieve answers to user queries using the BM25 algorithm.
 # Note: The PDF files should be placed in the 'crypto_insight' folder in the same directory as this script.
 # The extracted text, cleaned text, and answers will be displayed in the console.
 # The sentiment analysis and named entities will be printed for each user query.    
@@ -34,7 +34,6 @@ from nltk.stem import WordNetLemmatizer, PorterStemmer
 
 # Download necessary NLTK data files
 nltk.download('punkt')
-nltk.download('punkt_tab')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
@@ -62,8 +61,14 @@ all_text = ""
 all_sentences = []
 
 # Iterate through each PDF file and extract text
-for pdf_path in pdf_files:
-    file_path = "".join([relative_path, '\\crypto_insight\\' ,pdf_path])
+for pdf_path in tqdm(pdf_files, desc="Extracting PDFs"):
+    file_path = os.path.join(relative_path, 'crypto_insight', pdf_path)
+    if os.path.exists(file_path):
+        print(f"Extracting text from {file_path}...")
+    else:
+        print(f"File {file_path} does not exist.")
+        continue  # Skip this file if it doesn't exist
+    # Extract text from the PDF file
     all_text += extract_text_from_pdf(file_path) + "\n"
     
 # Step 2: Preprocess the extracted text
@@ -75,65 +80,66 @@ if all_text:
 with open("output.txt", "w", encoding="utf-8") as text_file:
     text_file.write("\n".join(all_sentences))  # Join sentences with new lines
 
-# Load stopwords
-stop_words = set(stopwords.words("english"))
-
-# Initialize lemmatizer and stemmer
-lemmatizer = WordNetLemmatizer()
-stemmer = PorterStemmer()
-
-# List of crypto-related terms to keep intact
-crypto_terms = {"bitcoin", "btc", "ethereum", "eth", "blockchain", "crypto", "nft", "defi", "web3", "dao", "altcoin","solana","hamster","dogecoin"
-                "stablecoin", "smart contract", "staking", "mining", "wallet", "coin", "token", "airdrop", "fomo", "hodl"}
-
 # preprocess_text function to clean and tokenize the text
 def PreProcessText(text):
-    # Convert to lowercase
-    text = text.lower()
+    # Cleans and tokenizes input text while keeping crypto terms unchanged."""
+    
+    # Load stopwords
+    stop_words = set(stopwords.words("english"))
 
-    # Remove unwanted special characters (like â€™, emojis, etc.)
-    text = unidecode.unidecode(text)  # Normalize special characters
-    text = re.sub(r"[^\x00-\x7F]+", " ", text)  # Remove non-ASCII characters
-    text = re.sub(r"[^a-zA-Z0-9\s]", "", text)  # Remove punctuations except spaces
+    # Initialize lemmatizer and stemmer
+    lemmatizer = WordNetLemmatizer()
 
-    # Remove punctuation
-    text = text.translate(str.maketrans("", "", string.punctuation))
+    # Initialize stemmer
+    stemmer = PorterStemmer()
 
-    cleaned_words = []
+    # Precompile regex for efficiency
+    CLEAN_REGEX = re.compile(r"[^a-zA-Z0-9\s#-]")  # Allows # and -
 
-    for word in text.split():
-        if word in crypto_terms:  # Preserve crypto-related words
-            cleaned_words.append(word)
-        elif word not in stop_words:
-            stemmed_word = stemmer.stem(word)  # Apply stemming
-            lemmatized_word = lemmatizer.lemmatize(stemmed_word)  # Apply lemmatization
-            cleaned_words.append(lemmatized_word)
-    return cleaned_words
+    # Define crypto terms as a set for O(1) lookups
+    crypto_terms = {"bitcoin", "ethereum", "blockchain", "dogecoin", "#ethereum", "#bitcoin", "litecoin", "ripple", "cardano", "solana", 
+                    "polkadot", "chainlink", "uniswap", "binance", "coinbase", "ftx", "kraken", "defi", "nft", "metaverse", "web3", "usdt"
+                    } 
 
-# Read the extracted text
+    # Convert text to lowercase and normalize Unicode characters
+    text = unidecode.unidecode(text.lower())
+    
+    # Remove unwanted characters
+    text = CLEAN_REGEX.sub("", text)
+
+    # Process words with list comprehension (efficient approach)
+    return [
+        word if word in crypto_terms else lemmatizer.lemmatize(word)
+        for word in text.split()
+            if word in crypto_terms or word not in stop_words
+    ]
+
+# Read the extracted text from the file
 with open("output.txt", "r", encoding="utf-8") as file:
     raw_text = file.read()
-
-# Apply preprocessing
 cleaned_tokens = PreProcessText(raw_text)
 
 # Save the cleaned text as a new file
 with open("cleaned_output.txt", "w", encoding="utf-8") as file:
     file.write(" ".join(cleaned_tokens))
 
+# Read the cleaned text from the file
+with open("cleaned_output.txt", "r", encoding="utf-8") as file:
+    cleaned_text = file.read()
+
 # Step 3: Process and push the cleaned text
 def ProcessAndPush(text: str):
-    #sentences = sent_tokenize(text)  # Sentence splitting
-    # Using TF-IDF embeddings as nltk doesn't have built-in word vectors
+    all_sentences = sent_tokenize(text)  # Tokenize into sentences
+    # Remove duplicates and empty sentences
+    #sentences = list(set(all_sentences))
+    #sentences = [sent for sent in sentences if sent.strip()]
+    
     vectorizer = TfidfVectorizer(max_features=5000)
     embeddings = vectorizer.fit_transform(sentences).toarray()
-    # Simulating "pushing" data (storing embeddings)
     data_store = {sent: vec for sent, vec in zip(sentences, embeddings)}
-    return data_store  # This is where you'd actually push to a database
+    return data_store
 
-# Step 4: Added for Sentiment Analysis using TextBlob - Amit Lakhera
-
-# Function to analyze sentiment using TextBlob
+# Step 4: Function to analyze sentiment using TextBlob
 def AnalyzeCryptoSentiment(text):
     blob = TextBlob(text)
     score = blob.sentiment.polarity
@@ -145,9 +151,9 @@ def AnalyzeCryptoSentiment(text):
         return "Neutral", score
 
 
-
 # Load the pre-trained SpaCy model
 nlp = spacy.load("en_core_web_sm")
+ruler = nlp.add_pipe("entity_ruler", before="ner")
 
 # Define a custom entity list for crypto-related terms
 custom_crypto_entities = [
@@ -169,6 +175,7 @@ custom_crypto_entities = [
     {"label": "TOKEN", "pattern": "USDC"},
     {"label": "TOKEN", "pattern": "DAI"},
 ]
+ruler.add_patterns(custom_crypto_entities)
 
 # Named Entity Recognition
 def ExtractCryptoEntities(text):
@@ -192,44 +199,45 @@ class CryptoAnswerRetrieval:
         self.bm25 = BM25Okapi(self.tokenized_sentences)
     
     #  Search function to retrieve answers based on user query
-    def search(self, query, top_n=3):
+    def search(self, query, sentiment, top_n=3):
         query_tokens = PreProcessText(query.lower())
         bm25_scores = self.bm25.get_scores(query_tokens)
-        ranked_answers = sorted(zip(self.sentences, bm25_scores), key=lambda x: x[1], reverse=True)
+
+        # Adjust BM25 scores based on sentiment
+        if sentiment == "Negative":
+            bm25_scores = [score * 0.8 for score in bm25_scores]  # Reduce score by 20%
+        elif sentiment == "Positive":
+            bm25_scores = [score * 1.2 for score in bm25_scores]  # Boost score by 20%
+
+        ranked_answers = [(sent, score) for sent, score in zip(self.sentences, bm25_scores) if score > 0.1]
+        ranked_answers.sort(key=lambda x: x[1], reverse=True)
         return ranked_answers[:top_n]
 
 # Process user query
 def ProcessUserQuery(user_query):
-
-    # Preprocess the user query
-    cleaned_data = " ".join(cleaned_tokens)
-    
-    # Perform sentiment analysis on the cleaned data
+    cleaned_data = " ".join(cleaned_text.split())
     data_store = ProcessAndPush(cleaned_data)
-    
-    # Perform sentiment analysis on the user query
     sentiment, score = AnalyzeCryptoSentiment(user_query)
-    
-    # Extract named entities from the user query
     retriever = CryptoAnswerRetrieval(list(data_store.keys()))
-    
-    # Retrieve top-ranked answers using BM25
-    ranked_answers = retriever.search(user_query, top_n=3)
-    
+    ranked_answers = retriever.search(user_query, sentiment, top_n=3)
     print(f"\nUser Query: {user_query}\n")
-    print(f"\nUser Query Sentiment Score: {score})\n")
+    print(f"Sentiment: {sentiment} (Score: {score:.2f})\n")
     print("Top-ranked Answers:")
-    
     for i, (answer, bm25_score) in enumerate(ranked_answers):
         print(f"{i+1}. {answer[:500]}... (BM25 Score: {bm25_score:.2f})")
     return ranked_answers
 
 # Main loop to process user queries
-condition = 'none'
-while condition.lower() != 'stop':
-    print("Please write 'STOP' to exit !!")
-    user_query = input("Enter your query about crypto: ")
-    condition = user_query
-    if condition.lower() == 'stop':
+COINS = ["dogecoin", "bitcoin", "ethereum", "solana", "cardano"]
+print("Welcome to the Crypto News Search!")
+print(f"Available coins: {', '.join(COINS)}")
+
+while True:
+    coin = input("\nEnter a coin name or type 'stop' to exit: ").strip().lower()
+    if coin == "stop":
         break
-    ranked_answers = ProcessUserQuery(user_query)
+    if coin not in COINS:
+        print("Invalid coin. Try again.")
+        continue
+    user_query = input("\nEnter your crypto-related query: ")
+    ProcessUserQuery(user_query)
