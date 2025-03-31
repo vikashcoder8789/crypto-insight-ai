@@ -1,86 +1,191 @@
-#Step 1: Done By Varsha 
-import pdfplumber
-import nltk
-import string
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize, sent_tokenize
-from sklearn.feature_extraction.text import TfidfVectorizer
+# Project Name: Crypto Insight 1.1
+# Project Description: This project aims to provide insights into cryptocurrency-related content by extracting and analyzing text from PDF files. It utilizes various NLP techniques, including TF-IDF and BM25 algorithms, for information retrieval and sentiment analysis.
+# Authors: Amit Lakhera, Varsha, Pardipta, Krishnopriya, Vikas, Aditi, Laxmi 
+# Last Modified Date: 31-March-2025
+# Version: 1.1
+# Python Version: 3.8
+# Libraries used: pdfplumber, nltk, string, spacy, numpy, sklearn, textblob, rank_bm25, tqdm, unidecode
+# Description: This script extracts text from PDF files, preprocesses the text, performs sentiment analysis and named entity recognition, and retrieves answers to user queries using the BM25 algorithm. It is designed to provide insights into cryptocurrency-related content.
+# This script is designed to be run in a Python environment with the required libraries installed. It extracts text from PDF files located in the 'crypto_insight' folder, processes the text to identify cryptocurrency-related entities, and allows users to query the extracted information. The script uses various NLP techniques, including TF-IDF and BM25 algorithms, for information retrieval and sentiment analysis.
+# Make sure to install them using pip if you haven't already:
 
+import os
+import re
+import pdfplumber
+import unidecode
+import nltk
+import spacy
+import numpy as np
+
+from tqdm import tqdm
+from nltk.tokenize import word_tokenize, sent_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from textblob import TextBlob
+from rank_bm25 import BM25Okapi
+from spacy.matcher import PhraseMatcher
+
+# Download necessary NLTK & spaCy data files
 nltk.download('punkt')
 nltk.download('punkt_tab')
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+# Load spaCy English model
+nlp = spacy.load("en_core_web_sm")
+
+#   Set up NLTK stopwords
+stopwords.words('english')
+
+# Define cryptocurrency-related terms
+crypto_terms = {
+    "bitcoin", "ethereum", "blockchain", "dogecoin", "litecoin", "ripple",
+    "cardano", "solana", "polkadot", "chainlink", "uniswap", "binance",
+    "coinbase", "ftx", "kraken", "defi", "nft", "metaverse", "web3", "usdt"
+}
+
+# Create a PhraseMatcher to detect crypto-related names
+matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
+patterns = [nlp.make_doc(term) for term in crypto_terms]
+matcher.add("CRYPTO", patterns)
+
+# Get current directory & locate PDFs
+current_directory = os.getcwd()
+pdf_folder = os.path.join(current_directory, 'crypto_insight')
+pdf_files = [os.path.join(pdf_folder, file) for file in os.listdir(pdf_folder) if file.endswith('.pdf')]
+
+# Function to extract text from PDFs
 def extract_text_from_pdf(pdf_path):
-    text = ""
+    extracted_text = []
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text:  # Ensure the extracted text is not None
-                text += page_text + "\n"
-    return text
+            text = page.extract_text()
+            if text:
+                extracted_text.append(text)
+    return "\n".join(extracted_text)
 
-# List of PDF file paths
-pdf_files = ['Crypto_Article1.pdf','Crypto_Article2.pdf','Crypto_Article3.pdf','Crypto_Article4.pdf','Crypto_Article5.pdf']  # Replace with your actual file paths
-
-# Extract text from multiple PDFs
+# Extract text from all PDFs
 all_text = ""
-for pdf_path in pdf_files:
-    all_text += extract_text_from_pdf(pdf_path) + "\n"
+for pdf_path in tqdm(pdf_files, desc="Extracting PDFs"):
+    if os.path.exists(pdf_path):
+        all_text += extract_text_from_pdf(pdf_path) + "\n\n"
+    else:
+        print(f"File {pdf_path} does not exist.")
 
-# Print extracted text
-print(all_text)
+# Save extracted text
+with open("extracted_text.txt", "w", encoding="utf-8") as file:
+    file.write(all_text)
 
-# Save the extracted text to a file
-with open("output.txt", "w", encoding="utf-8") as text_file:
-    text_file.write(all_text)
+# Named Entity Recognition (NER) for Crypto Terms
+def extract_crypto_entities(text):
+    doc = nlp(text)
 
-#Step 2: Pre-processisng  Done By Varsha
+    # Get recognized named entities
+    recognized_entities = {ent.text for ent in doc.ents if ent.label_ in ["ORG", "MONEY", "PRODUCT", "GPE"]}
 
-# Load English stopwords
-stop_words = set(stopwords.words('english'))
+    # Use PhraseMatcher for custom entity detection
+    matches = matcher(doc)
+    matched_crypto = {doc[start:end].text for match_id, start, end in matches}
 
+    # Merge both sets
+    crypto_entities = recognized_entities.union(matched_crypto)
+    return list(crypto_entities)
+
+crypto_entities_found = extract_crypto_entities(all_text)
+#print("\nExtracted Crypto-related Entities:", crypto_entities_found)
+
+# Text Preprocessing
 def preprocess_text(text):
-    # Convert to lowercase
-    text = text.lower()
+    lemmatizer = WordNetLemmatizer()
+    stop_words = set(stopwords.words('english'))
+    text = unidecode.unidecode(text.lower())
+    text = re.sub(r'[^a-z\s]', '', text)
+    tokens = word_tokenize(text)
+    return [word if word in crypto_terms else lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
 
-    # Remove punctuation
-    text = text.translate(str.maketrans("", "", string.punctuation))
+# Sentence tokenization
+sentences = sent_tokenize(all_text)
 
-    # Tokenization
-    words = word_tokenize(text)
+# Initialize TF-IDF model
+tfidf_vectorizer = TfidfVectorizer(max_features=5000, stop_words='english')
+tfidf_matrix = tfidf_vectorizer.fit_transform(sentences)
 
-    # Remove stopwords
-    filtered_words = [word for word in words if word not in stop_words]
+# Initialize BM25 model
+bm25 = BM25Okapi([preprocess_text(sent) for sent in sentences])
 
-    return filtered_words
+# Sentiment Analysis
+def analyze_crypto_sentiment(text):
+    blob = TextBlob(text)
+    score = blob.sentiment.polarity
+    return ("Positive" if score > 0 else "Negative" if score < 0 else "Neutral"), score
 
-# Read the extracted text
-with open("output.txt", "r", encoding="utf-8") as file:
-    raw_text = file.read()
+# Find relevant sentences using TF-IDF
+def find_tfidf_matches(query):
+    query_vector = tfidf_vectorizer.transform([query])
+    similarity_scores = cosine_similarity(query_vector, tfidf_matrix)[0]
+    ranked_results = sorted(zip(sentences, similarity_scores), key=lambda x: x[1], reverse=True)
+    return [(res[0], res[1]) for res in ranked_results if res[1] > 0.1][:3]
 
-# Apply preprocessing
-cleaned_tokens = preprocess_text(raw_text)
+# Find relevant sentences using BM25
+def find_bm25_matches(query, sentiment):
+    query_tokens = preprocess_text(query.lower())
+    bm25_scores = bm25.get_scores(query_tokens)
 
-# Print sample cleaned tokens
-print(cleaned_tokens[:50])  # Print first 50 words after preprocessing
+    # Adjust scores based on sentiment
+    if sentiment == "Negative":
+        bm25_scores = [score * 0.8 for score in bm25_scores]
+    elif sentiment == "Positive":
+        bm25_scores = [score * 1.2 for score in bm25_scores]
+    
+    ranked_results = [(sent, score) for sent, score in zip(sentences, bm25_scores) if score > 0.1]
+    ranked_results.sort(key=lambda x: x[1], reverse=True)
+    return ranked_results[:3]
 
-# Save the cleaned text as a new file
-with open("cleaned_output.txt", "w", encoding="utf-8") as file:
-    file.write(" ".join(cleaned_tokens))
+# Process user query
+def process_user_query(user_query):
+    sentiment, score = analyze_crypto_sentiment(user_query)
 
-# Step 3 : Done By Vikas vectorization Split
+    bm25_results = find_bm25_matches(user_query, sentiment)  # [(sentence, score), ...]
+    tfidf_results = find_tfidf_matches(user_query)  # [(sentence, score), ...]
 
-def processAndPush(text: str):
-    sentences = sent_tokenize(text)  # Sentence splitting
+    # Merge results and keep the highest score for each sentence
+    combined_results = {}
+    for sentence, score in bm25_results + tfidf_results:
+        if sentence in combined_results:
+            combined_results[sentence] = max(combined_results[sentence], score)
+        else:
+            combined_results[sentence] = score
 
-    # Using TF-IDF embeddings as nltk doesn't have built-in word vectors
-    vectorizer = TfidfVectorizer()
-    embeddings = vectorizer.fit_transform(sentences).toarray()
+    # Sort results based on score (highest first)
+    ranked_results = sorted(combined_results.items(), key=lambda x: x[1], reverse=True)
 
-    # Simulating "pushing" data (storing embeddings)
-    data_store = {sent: vec for sent, vec in zip(sentences, embeddings)}
+    # Limit to top 3 answers
+    top_results = ranked_results[:3]
 
-    return data_store  # This is where you'd actually push to a database
+    print(f"\nUser Query: {user_query}")
+    print(f"Sentiment: {sentiment} (Score: {score:.2f})\n")
+    print("Top-ranked Answers:")
+    for i, (answer, score) in enumerate(top_results):
+        print(f"{i+1}. {answer[:500]}... (Score: {score:.2f})")
 
-# Example usage
+# Main loop to process user queries
+COINS = ["dogecoin", "bitcoin", "ethereum", "solana", "cardano"]
+print("\nWelcome to the Crypto Insight 1.1")
+print(f"\nAvailable coins: {', '.join(COINS)}")
 
-result = processAndPush(text)
-print(result)  # Prints sentence-to-vector mapping
+while True:
+    coin = input("\nEnter a coin name or type 'stop' to exit: ").strip().lower()
+    if coin == "stop":
+        break
+
+    if coin not in COINS:
+        print("\nInvalid coin. Try again.")
+        continue
+
+    #   Get user query
+    user_query = input("\nEnter your crypto-related query: ")
+    
+    #   Process the user query
+    process_user_query(user_query)
