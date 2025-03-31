@@ -1,0 +1,15 @@
+import nltk
+import numpy as np
+from nltk.tokenize import sent_tokenize
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+nltk.download('punkt')
+
+### Step 3: Splitting Feed NLP (Sentence Embeddings)
+def processAndPush(text):
+    sentences = sent_tokenize(text)  # Sentence Splitting
+    vectorizer = TfidfVectorizer(max_features=5000)  # Limit features for efficiency
+    embeddings = vectorizer.fit_transform(sentences).toarray()  # Convert sentences to TF-IDF vectors
+    
+    data_store = {sent: vec for sent, vec in zip(sentences, embeddings)}  # Store sentence embeddings
+    return data_store
