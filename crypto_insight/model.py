@@ -15,8 +15,9 @@ import pdfplumber
 import unidecode
 import nltk
 import spacy
-import numpy as np
+import json
 
+from datetime import datetime
 from tqdm import tqdm
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.corpus import stopwords
@@ -45,6 +46,7 @@ crypto_terms = {
     "cardano", "solana", "polkadot", "chainlink", "uniswap", "binance",
     "coinbase", "ftx", "kraken", "defi", "nft", "metaverse", "web3", "usdt"
 }
+
 
 # Create a PhraseMatcher to detect crypto-related names
 matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
@@ -169,6 +171,36 @@ def process_user_query(user_query):
     print("Top-ranked Answers:")
     for i, (answer, score) in enumerate(top_results):
         print(f"{i+1}. {answer[:500]}... (Score: {score:.2f})")
+    return top_results, sentiment, score
+
+# Log user queries and results
+LOG_FILE = os.path.join(current_directory, "query_logs.json")
+def log_query(coin, user_query, sentiment, top_results):
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "coin": coin,
+        "query": user_query,
+        "sentiment": sentiment,
+        "answers": [
+            {
+                "text": sentence,
+                "score": round(score, 4)
+            } for sentence, score in top_results
+        ]
+    }
+        # Append to JSON file
+    try:
+        if os.path.exists(LOG_FILE):
+            with open(LOG_FILE, "r+", encoding="utf-8") as f:
+                data = json.load(f)
+                data.append(log_entry)
+                f.seek(0)
+                json.dump(data, f, indent=4)
+        else:
+            with open(LOG_FILE, "w", encoding="utf-8") as f:
+                json.dump([log_entry], f, indent=4)
+    except Exception as e:
+        print(f"Error logging query: {e}")
 
 # Main loop to process user queries
 COINS = ["dogecoin", "bitcoin", "ethereum", "solana", "cardano"]
@@ -184,8 +216,7 @@ while True:
         print("\nInvalid coin. Try again.")
         continue
 
-    #   Get user query
     user_query = input("\nEnter your crypto-related query: ")
-    
-    #   Process the user query
-    process_user_query(user_query)
+    top_results, sentiment, score = process_user_query(user_query)
+    log_query(coin, user_query, sentiment, top_results)
+    print("\nQuery logged successfully.")
