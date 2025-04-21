@@ -72,6 +72,9 @@ Installation
 2. Install dependencies:
        
        pip install -r requirements.txt
+       
+       #After Installation of requirements.txt run the following cmd line in terminal
+       python -m spacy download en_core_web_sm
 
 
 
