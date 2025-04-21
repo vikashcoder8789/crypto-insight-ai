@@ -1,6 +1,6 @@
 # Define cryptocurrency-related terms
 
-keywords = {"Crypto", "Cryptocurrency", "Digital currency", "Virtual currency", "Blockchain", "Decentralized finance", "DeFi", "Web3",
+crypto_terms = {"Crypto", "Cryptocurrency", "Digital currency", "Virtual currency", "Blockchain", "Decentralized finance", "DeFi", "Web3",
             "Digital assets", "Crypto assets", "Bitcoin", "BTC", "Ethereum", "ETH", "Altcoins", "Stablecoins", "Tether", "USDT", "USDC", 
             "Memecoins", "Dogecoin", "Shiba Inu", "Cardano", "Solana", "Litecoin", "Crypto exchange", "Decentralized exchange", "DEX", 
             "Centralized exchange", "CEX", "Trading pairs", "Order book", "Liquidity", "Trading volume", "Market cap", "Market capitalization", 
