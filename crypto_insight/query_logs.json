@@ -1212,5 +1212,25 @@
                 "score": 5.2208
             }
         ]
+    },
+    {
+        "timestamp": "2025-04-21T23:33:02.065904",
+        "coin": "cardano",
+        "query": "can i trade in this coin?",
+        "sentiment": "Neutral (Score: 0.28)",
+        "answers": [
+            {
+                "text": "- Bitcoin trades at $80,378, down 2.51%, with resistance at\n$85,000 and support at $78,000.",
+                "score": 5.9655
+            },
+            {
+                "text": "This has further instigated shifts in global trade\nrelationships.",
+                "score": 5.6794
+            },
+            {
+                "text": "It\nseems like meme coins are losing ground to utility-focused coins in 2025.",
+                "score": 5.2208
+            }
+        ]
     }
 ]

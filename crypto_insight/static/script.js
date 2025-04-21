@@ -10,25 +10,6 @@ function sendQuery() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ coin, query })
   })
-    // .then(res => res.json())
-    // .then(data => {
-    //   const { coin, query, sentiment, top_answers } = data;
-
-    //   const formattedAnswers = top_answers
-    //   .map(ans => `<li>${ans.replace(/^[-\d\.\s]+/, '').replace(/\n/g, ' ').trim()}</li>`)
-    //   .join('');
-
-    //   resultDiv.innerHTML = `
-    //     <p><strong>Coin:</strong> ${capitalize(coin)}</p>
-    //     <p><strong>Question:</strong> ${query}</p>
-    //     <p><strong>Sentiment:</strong> ${sentiment}</p>
-    //     <p><strong>Top Answers:</strong></p>
-    //     <ol>${formattedAnswers}</ol>
-    //   `;
-    // })
-    // .catch(() => {
-    //   resultDiv.textContent = 'Error connecting to backend.';
-    // });
       .then(res => {
         if (!res.ok) {
           return res.json().then(err => {
