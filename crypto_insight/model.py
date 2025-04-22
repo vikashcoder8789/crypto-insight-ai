@@ -27,6 +27,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from textblob import TextBlob
 from rank_bm25 import BM25Okapi
 from spacy.matcher import PhraseMatcher
+from keywords import crypto_terms
 
 # Download necessary NLTK & spaCy data files
 nltk.download('punkt')
@@ -40,12 +41,6 @@ nlp = spacy.load("en_core_web_sm")
 #   Set up NLTK stopwords
 stopwords.words('english')
 
-# Define cryptocurrency-related terms
-crypto_terms = {
-    "bitcoin", "ethereum", "blockchain", "dogecoin", "litecoin", "ripple",
-    "cardano", "solana", "polkadot", "chainlink", "uniswap", "binance",
-    "coinbase", "ftx", "kraken", "defi", "nft", "metaverse", "web3", "usdt"
-}
 
 
 # Create a PhraseMatcher to detect crypto-related names
