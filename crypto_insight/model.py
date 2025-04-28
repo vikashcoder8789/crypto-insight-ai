@@ -148,10 +148,12 @@ def valid_query(query):
     return any(keyword in query for keyword in crypto_terms)
 
 def process_query(coin, query):
-    sentiment, score = analyze_crypto_sentiment(query)
+    modified_query = f"{coin} {query}"
 
-    bm25_results = find_bm25_matches(query, sentiment)  # [(sentence, score), ...]
-    tfidf_results = find_tfidf_matches(query)  # [(sentence, score), ...]
+    sentiment, score = analyze_crypto_sentiment(modified_query)
+
+    bm25_results = find_bm25_matches(modified_query, sentiment)  # [(sentence, score), ...]
+    tfidf_results = find_tfidf_matches(modified_query)  # [(sentence, score), ...]
 
     # Merge results and keep the highest score for each sentence
     combined_results = {}
@@ -172,7 +174,7 @@ def process_query(coin, query):
     "coin": coin,
     "sentiment": f"{sentiment} (Score: {score:.2f})",
     "top_answers": [
-        f"{i+1}. {answer[:500]}... (Score: {score:.2f})"
+        f"{i+1}. {answer[:600]}..."
         for i, (answer, score) in enumerate(top_results)
     ],
     "raw_top_results": top_results  # This line is for logging
