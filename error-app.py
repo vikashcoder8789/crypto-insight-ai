@@ -32,6 +32,7 @@ def handle_query():
         return jsonify({"error": validation_msg}), 400
 
     # Placeholder for NLP model
+    #print
     return jsonify({"result": f"Processed your query: '{query}' for {coin.title()}"}), 200
 
 @app.errorhandler(Exception)
