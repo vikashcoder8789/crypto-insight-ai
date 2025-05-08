@@ -41,8 +41,10 @@ nlp = spacy.load("en_core_web_sm")
 #   Set up NLTK stopwords
 stopwords.words('english')
 
+
 # All the coins we are using
 COINS = ["bitcoin", "ethereum", "solana", "dogecoin", "hamstercoin", "cardano" ,"general crypto"]
+
 
 
 # Create a PhraseMatcher to detect crypto-related names
@@ -169,6 +171,7 @@ def process_query(coin, query):
     # Limit to top 3 answers
     top_results = ranked_results[:3]
 
+
     return {
     "query": query,
     "coin": coin,
@@ -180,4 +183,60 @@ def process_query(coin, query):
     "raw_top_results": top_results  # This line is for logging
 }
 
+
+=======
+    print(f"\nUser Query: {user_query}")
+    print(f"Sentiment: {sentiment} (Score: {score:.2f})\n")
+    print("Top-ranked Answers:")
+    for i, (answer, score) in enumerate(top_results):
+        print(f"{i+1}. {answer[:500]}... (Score: {score:.2f})")
+    return top_results, sentiment, score
+
+# Log user queries and results
+LOG_FILE = os.path.join(current_directory, "query_logs.json")
+def log_query(coin, user_query, sentiment, top_results):
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "coin": coin,
+        "query": user_query,
+        "sentiment": sentiment,
+        "answers": [
+            {
+                "text": sentence,
+                "score": round(score, 4)
+            } for sentence, score in top_results
+        ]
+    }
+        # Append to JSON file
+    try:
+        if os.path.exists(LOG_FILE):
+            with open(LOG_FILE, "r+", encoding="utf-8") as f:
+                data = json.load(f)
+                data.append(log_entry)
+                f.seek(0)
+                json.dump(data, f, indent=4)
+        else:
+            with open(LOG_FILE, "w", encoding="utf-8") as f:
+                json.dump([log_entry], f, indent=4)
+    except Exception as e:
+        print(f"Error logging query: {e}")
+
+# Main loop to process user queries
+COINS = ["dogecoin", "bitcoin", "ethereum", "solana", "cardano"]
+print("\nWelcome to the Crypto Insight 1.1")
+print(f"\nAvailable coins: {', '.join(COINS)}")
+
+while True:
+    coin = input("\nEnter a coin name or type 'stop' to exit: ").strip().lower()
+    if coin == "stop":
+        break
+
+    if coin not in COINS:
+        print("\nInvalid coin. Try again.")
+        continue
+
+    user_query = input("\nEnter your crypto-related query: ")
+    top_results, sentiment, score = process_user_query(user_query)
+    log_query(coin, user_query, sentiment, top_results)
+    print("\nQuery logged successfully.")
 
