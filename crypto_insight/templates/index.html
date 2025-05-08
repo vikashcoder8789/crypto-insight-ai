@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Crypto Insight</title>
+  <link rel="stylesheet" href="../static/style.css">
+</head>
+<body>
+
+  <h2>Crypto Insight</h2>
+
+  <label for="coin">Select a Coin:</label>
+  <select id="coin">
+    <option value="general crypto">General Crypto</option>
+    <option value="bitcoin">Bitcoin</option>
+    <option value="ethereum">Ethereum</option>
+    <option value="solana">Solana</option>
+    <option value="dogecoin">Dogecoin</option>
+    <option value="hamstercoin">Hamstercoin</option>
+    <option value="cardano">Cardano</option>
+    <!-- <option value="trump">TrumpCoin</option> -->
+
+  </select>
+
+  <label for="query">Enter your query:</label>
+  <input type="text" id="query" placeholder="e.g. What is bitcoin?">
+
+  <button onclick="sendQuery()">Get Insight</button>
+
+  <div id="result"></div>
+
+<script src="../static/script.js"></script>
+</body>
+</html>

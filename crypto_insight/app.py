@@ -6,7 +6,7 @@ from logger import log_query
 app = Flask(__name__)
 CORS(app)
 
-# Health-check and homepage endpoint (GET)
+# Homepage endpoint (GET and POST)
 @app.route("/", methods=['GET', 'POST'])
 def index():
     # Try to render an index.html template if available; otherwise return a simple message.
@@ -35,7 +35,7 @@ def handle_query():
 
     # Validate that the query contains some crypto-related keywords
     if not valid_query(query):
-        return jsonify({"error": "Query seems unrelated to crypto. Try asking something like 'What's the trend of Bitcoin this week?'"}), 400
+        return jsonify({"error": "Query seems unrelated to crypto. Try asking something like 'What's the trend of Bitcoin this week?'"}),400
 
     # Process the query using model.py
     result = process_query(coin, query)
@@ -49,6 +49,7 @@ def handle_query():
     # Removing raw_top_results so it doesn't show on the frontend
     result.pop("raw_top_results", None)
     # Logging ends________________________________________________________
+    
     return jsonify(result), 200
 
 if __name__ == "__main__":

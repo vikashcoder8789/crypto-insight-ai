@@ -1,0 +1,16 @@
+Flask
+flask-cors
+pdfplumber
+nltk
+spacy
+numpy
+scikit-learn
+textblob
+rank-bm25
+tqdm
+unidecode
+requests
+beautifulsoup4
+trafilatura
+pdfkit
+matplotlib

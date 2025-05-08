@@ -15,9 +15,8 @@ import pdfplumber
 import unidecode
 import nltk
 import spacy
-import json
-
-from datetime import datetime
+import numpy as np
+import json 
 from tqdm import tqdm
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.corpus import stopwords
@@ -28,6 +27,7 @@ from textblob import TextBlob
 from rank_bm25 import BM25Okapi
 from spacy.matcher import PhraseMatcher
 from keywords import crypto_terms
+
 
 # Download necessary NLTK & spaCy data files
 nltk.download('punkt')
@@ -40,6 +40,10 @@ nlp = spacy.load("en_core_web_sm")
 
 #   Set up NLTK stopwords
 stopwords.words('english')
+
+
+# All the coins we are using
+COINS = ["bitcoin", "ethereum", "solana", "dogecoin", "hamstercoin", "cardano" ,"general crypto"]
 
 
 
@@ -141,11 +145,17 @@ def find_bm25_matches(query, sentiment):
     return ranked_results[:3]
 
 # Process user query
-def process_user_query(user_query):
-    sentiment, score = analyze_crypto_sentiment(user_query)
+def valid_query(query):
+    query = query.lower()
+    return any(keyword in query for keyword in crypto_terms)
 
-    bm25_results = find_bm25_matches(user_query, sentiment)  # [(sentence, score), ...]
-    tfidf_results = find_tfidf_matches(user_query)  # [(sentence, score), ...]
+def process_query(coin, query):
+    modified_query = f"{coin} {query}"
+
+    sentiment, score = analyze_crypto_sentiment(modified_query)
+
+    bm25_results = find_bm25_matches(modified_query, sentiment)  # [(sentence, score), ...]
+    tfidf_results = find_tfidf_matches(modified_query)  # [(sentence, score), ...]
 
     # Merge results and keep the highest score for each sentence
     combined_results = {}
@@ -161,6 +171,20 @@ def process_user_query(user_query):
     # Limit to top 3 answers
     top_results = ranked_results[:3]
 
+
+    return {
+    "query": query,
+    "coin": coin,
+    "sentiment": f"{sentiment} (Score: {score:.2f})",
+    "top_answers": [
+        f"{i+1}. {answer[:600]}..."
+        for i, (answer, score) in enumerate(top_results)
+    ],
+    "raw_top_results": top_results  # This line is for logging
+}
+
+
+=======
     print(f"\nUser Query: {user_query}")
     print(f"Sentiment: {sentiment} (Score: {score:.2f})\n")
     print("Top-ranked Answers:")
@@ -215,3 +239,4 @@ while True:
     top_results, sentiment, score = process_user_query(user_query)
     log_query(coin, user_query, sentiment, top_results)
     print("\nQuery logged successfully.")
+
